@@ -830,6 +830,7 @@ private fun onText(session: WebSession, text: String, ip: String) {
                 identityText = m["identity"] as? String,
                 channel = (m["channel"] as? String).orEmpty(),
                 channelPassword = (m["channelPassword"] as? String).orEmpty(),
+                cloudIdentityId = if (m["guest"] == true) null else m["cloudIdentityId"] as? String,
             )
         }
         "leave" -> session.leave()

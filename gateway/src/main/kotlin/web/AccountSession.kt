@@ -4,6 +4,7 @@ import tsproto.CloudFailure
 import tsproto.Json
 import tsproto.MyTsAccount
 import tsproto.MyTsBookmarks
+import tsproto.MyTsIdentities
 import tsproto.MyTsProfile
 import tsproto.MyTsVoiceData
 import tsproto.MyTsVoiceIdentity
@@ -74,6 +75,9 @@ class AccountSession(
     @Volatile private var email = ""
     @Volatile private var avatarUrl = ""
     @Volatile private var error: String? = null
+    @Volatile private var syncedIdentities: List<MyTsIdentities.Entry> = emptyList()
+    @Volatile private var identitiesLoading = false
+    @Volatile private var identitiesError: String? = null
     @Volatile private var bookmarks: List<MyTsBookmarks.Bookmark> = emptyList()
     @Volatile private var bookmarksLoading = false
     @Volatile private var bookmarksError: String? = null
@@ -84,6 +88,9 @@ class AccountSession(
 
     /** For [web.WebSession.connect]: the account proof for the next voice connection, if it has one. */
     fun voiceIdentity(): MyTsVoiceIdentity? = voiceIdentity
+    /** Resolve a cloud entry only within the currently signed-in account; never expose its private key to the page. */
+    fun syncedIdentity(id: String): tsproto.Identity? = if (phase == "signedIn" && !identitiesLoading)
+        syncedIdentities.singleOrNull { it.id == id }?.identity else null
 
     /** For [CloudChatSession]: the live myTeamSpeak session, from which chat credentials are minted. Null while signed out. */
     fun chatSession(): MyTsAccount.Session? = session
@@ -115,6 +122,9 @@ class AccountSession(
                     fresh.syncKey?.fill(0)
                     return@submit
                 }
+                syncedIdentities = emptyList()
+                identitiesLoading = true
+                identitiesError = null
                 session = fresh
                 username = fresh.username
                 this.email = fresh.email.ifBlank { address }
@@ -128,6 +138,7 @@ class AccountSession(
                 }
                 phase = "signedIn"
                 pushAccount()
+                loadIdentities(fresh)
                 loadProfile(fresh)
                 loadBookmarks(fresh)
                 loadContacts(fresh)
@@ -166,6 +177,7 @@ class AccountSession(
         val current = session ?: return
         submit {
             if (session !== current) return@submit
+            loadIdentities(current)
             loadProfile(current)
             loadBookmarks(current)
             loadContacts(current)
@@ -234,6 +246,9 @@ class AccountSession(
                     restored.syncKey?.fill(0)
                     return@submit
                 }
+                syncedIdentities = emptyList()
+                identitiesLoading = true
+                identitiesError = null
                 session = restored
                 username = restored.username
                 email = restored.email
@@ -247,6 +262,7 @@ class AccountSession(
                 }
                 phase = "signedIn"
                 pushAccount()
+                loadIdentities(restored)
                 loadProfile(restored)
                 loadBookmarks(restored)
                 loadContacts(restored)
@@ -376,6 +392,24 @@ class AccountSession(
         }
     }
 
+    private fun loadIdentities(current: MyTsAccount.Session) {
+        identitiesLoading = true
+        identitiesError = null
+        syncedIdentities = emptyList()
+        pushAccount()
+        try {
+            val items = MyTsIdentities().read(current)
+            if (session !== current) return
+            syncedIdentities = items
+        } catch (e: CloudFailure) {
+            if (session === current) identitiesError = e.code
+        } catch (_: Exception) {
+            if (session === current) identitiesError = "IDENTITY_INVALID_REPLY"
+        } finally {
+            if (session === current) { identitiesLoading = false; pushAccount() }
+        }
+    }
+
     private fun loadBookmarks(current: MyTsAccount.Session) {
         bookmarksLoading = true
         bookmarksError = null
@@ -460,6 +494,9 @@ class AccountSession(
         session?.syncKey?.fill(0)
         session = null
         voiceIdentity = null
+        syncedIdentities = emptyList()
+        identitiesLoading = false
+        identitiesError = null
         username = ""
         email = ""
         avatarUrl = ""
@@ -482,6 +519,9 @@ class AccountSession(
                 "username" to username,
                 "email" to email,
                 "avatarUrl" to avatarUrl,
+                "identities" to syncedIdentities.map { mapOf("id" to it.id, "name" to it.name, "nickname" to it.nickname, "ts6Uid" to it.ts6Uid) },
+                "identitiesLoading" to identitiesLoading,
+                "identitiesError" to identitiesError,
                 "error" to error,
                 "fileToken" to fileToken,
             )

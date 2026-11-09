@@ -234,11 +234,12 @@ class WebSession(
 
     // ====== What the tab asks for ======
 
-    fun connect(host: String, port: Int, nickname: String, password: String, identityText: String?, channel: String = "", channelPassword: String = "") {
+    fun connect(host: String, port: Int, nickname: String, password: String, identityText: String?, channel: String = "", channelPassword: String = "", cloudIdentityId: String? = null) {
         if (closed) return
         leave()
         val identity = try {
-            if (identityText.isNullOrBlank()) Identity.generate() else Identity.import(identityText)
+            if (!cloudIdentityId.isNullOrBlank()) account.syncedIdentity(cloudIdentityId) ?: throw IllegalArgumentException("Account identity unavailable")
+            else if (identityText.isNullOrBlank()) Identity.generate() else Identity.import(identityText)
         } catch (e: Exception) {
             log("Could not read the identity the tab sent: ${e.message}")
             fail("身份数据无法读取，请重新生成")
@@ -254,7 +255,8 @@ class WebSession(
         channelPasswords.clear()
         pendingChannelPassword = channelPassword
         dirty.set(true)
-        sink.text(Json.write(mapOf("t" to "identity", "v" to identity.export())))
+        // Only a locally generated identity is returned to the browser; cloud private keys stay in gateway memory.
+        if (cloudIdentityId.isNullOrBlank()) sink.text(Json.write(mapOf("t" to "identity", "v" to identity.export())))
 
         val c = TsClient(this) { log("$address: $it") }
         owned?.close()
