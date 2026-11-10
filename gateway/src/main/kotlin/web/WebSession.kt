@@ -237,13 +237,13 @@ class WebSession(
     fun connect(host: String, port: Int, nickname: String, password: String, identityText: String?, channel: String = "", channelPassword: String = "", guest: Boolean = false) {
         if (closed) return
         leave()
-        val useAccountIdentity = !guest && account.hasAccountOrPending()
+        val useAccountIdentity = account.hasAccountOrPending()
         val identity = try {
             if (useAccountIdentity) account.syncedIdentity() ?: throw IllegalArgumentException("Account identity unavailable")
             else if (identityText.isNullOrBlank()) Identity.generate() else Identity.import(identityText)
         } catch (e: Exception) {
             log("Could not read the identity the tab sent: ${e.message}")
-            fail(if (useAccountIdentity) "无法确定账号同步身份，请在 Windows 同步正在使用的身份，并确保账号只有一个同步身份。" else "身份数据无法读取，请重新生成")
+            fail(if (useAccountIdentity) "账号中没有唯一的 defult 同步身份，或同步暂不可用；请检查官方客户端和网络。" else "身份数据无法读取，请重新生成")
             return
         }
         this.nickname = nickname
@@ -277,7 +277,7 @@ class WebSession(
                 defaultChannel = channel,
                 defaultChannelPassword = channelPassword,
                 // Signed in: prove the account to the server, so it can show the account's badges and signed avatar.
-                myTsIdentity = if (guest) null else account.voiceIdentity(),
+                myTsIdentity = if (useAccountIdentity) account.voiceIdentity() else null,
             )
         )
     }
