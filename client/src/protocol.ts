@@ -227,6 +227,9 @@ export interface AccountState {
   username: string;
   email: string;
   avatarUrl: string;
+  identities?: { id: string; name: string; nickname: string; ts6Uid: string }[];
+  identitiesLoading?: boolean;
+  identitiesError?: string | null;
   error: string | null;
   /** 头像上传的凭据（HTTP 端点认 X-File-Token）。 */
   fileToken?: string;

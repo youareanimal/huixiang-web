@@ -195,7 +195,10 @@ export default function ConnectPage({
   const signedIn = account.phase === 'signedIn' && !!(account.username || account.email);
   // 账号登录取账号名；游客登录始终用用户自己填的昵称，哪怕已登录 myTeamSpeak
   const nick = mode === 'guest' ? nickname : effectiveNickname(account, nickname);
-  const canConnect = !!parsed && nick.trim().length > 0 && (!tokenNeeded || token.trim().length > 0) && agreed;
+  const identityChoices = account.identities ?? [];
+  const matchingIdentities = identityChoices.filter((entry) => entry.name === 'defult');
+  const cloudIdentityReady = !signedIn || (!account.identitiesLoading && !account.identitiesError && matchingIdentities.length === 1);
+  const canConnect = !!parsed && nick.trim().length > 0 && (!tokenNeeded || token.trim().length > 0) && agreed && cloudIdentityReady;
   const accountBusy = account.phase === 'busy';
   // 账号页签只填账号、密码、口令（要网关口令的话），协议勾上就能点「登录」；
   // 服务器地址和服务器密码留到登录后的中间页再填，那里还能挑云书签。
@@ -570,6 +573,13 @@ export default function ConnectPage({
 
                 {signedIn && (
                   <>
+                    <div className="login-field">
+                      <label>账号身份</label>
+                      {account.identitiesLoading ? <span className="login-hint">正在同步身份…</span> : account.identitiesError ?
+                        <span className="field-error">身份同步失败，请刷新或重新登录（{account.identitiesError}）</span> :
+                        matchingIdentities.length !== 1 ? <span className="field-error">账号中没有唯一的 defult 同步身份，请检查官方客户端中的身份名称和同步状态。</span> :
+                        <span className="login-hint">自动使用 defult 同步身份</span>}
+                    </div>
                     <div className="login-bookmarks">
                       <div className="login-bookmarks-head">
                         <span>云书签</span>
