@@ -17,6 +17,8 @@ class AccountIdentityTest {
         }
         val first = entry("1", "default")
         assertEquals(first.identity.uid, automaticAccountIdentity(current, current, listOf(first))?.uid)
+        val capitalized = entry("5", "Default")
+        assertEquals(capitalized.identity.uid, automaticAccountIdentity(current, current, listOf(capitalized))?.uid)
         assertNull(automaticAccountIdentity(current, other, listOf(first)))
         assertNull(automaticAccountIdentity(null, current, listOf(first)))
         assertNull(automaticAccountIdentity(current, current, emptyList()))
@@ -24,5 +26,6 @@ class AccountIdentityTest {
         assertNull(automaticAccountIdentity(current, current, listOf(entry("2", "默认"))))
         assertNull(automaticAccountIdentity(current, current, listOf(entry("4", "defult"))))
         assertNull(automaticAccountIdentity(current, current, listOf(first, entry("3", "default"))))
+        assertNull(automaticAccountIdentity(current, current, listOf(first, entry("6", "Default"))))
     }
 }
