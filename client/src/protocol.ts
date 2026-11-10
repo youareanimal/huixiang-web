@@ -399,7 +399,6 @@ export interface ConnectOptions {
   nickname: string;
   password: string;
   identity: string | null;
-  cloudIdentityId?: string;
   /** 游客登录：昵称始终用用户自己填的，不被 myTeamSpeak 账号名覆盖 */
   guest?: boolean;
 }

@@ -234,15 +234,16 @@ class WebSession(
 
     // ====== What the tab asks for ======
 
-    fun connect(host: String, port: Int, nickname: String, password: String, identityText: String?, channel: String = "", channelPassword: String = "", cloudIdentityId: String? = null) {
+    fun connect(host: String, port: Int, nickname: String, password: String, identityText: String?, channel: String = "", channelPassword: String = "", guest: Boolean = false) {
         if (closed) return
         leave()
+        val useAccountIdentity = !guest && account.hasAccountOrPending()
         val identity = try {
-            if (!cloudIdentityId.isNullOrBlank()) account.syncedIdentity(cloudIdentityId) ?: throw IllegalArgumentException("Account identity unavailable")
+            if (useAccountIdentity) account.syncedIdentity() ?: throw IllegalArgumentException("Account identity unavailable")
             else if (identityText.isNullOrBlank()) Identity.generate() else Identity.import(identityText)
         } catch (e: Exception) {
             log("Could not read the identity the tab sent: ${e.message}")
-            fail("身份数据无法读取，请重新生成")
+            fail(if (useAccountIdentity) "无法确定账号同步身份，请在 Windows 同步正在使用的身份，并确保账号只有一个同步身份。" else "身份数据无法读取，请重新生成")
             return
         }
         this.nickname = nickname
@@ -256,7 +257,7 @@ class WebSession(
         pendingChannelPassword = channelPassword
         dirty.set(true)
         // Only a locally generated identity is returned to the browser; cloud private keys stay in gateway memory.
-        if (cloudIdentityId.isNullOrBlank()) sink.text(Json.write(mapOf("t" to "identity", "v" to identity.export())))
+        if (!useAccountIdentity) sink.text(Json.write(mapOf("t" to "identity", "v" to identity.export())))
 
         val c = TsClient(this) { log("$address: $it") }
         owned?.close()
@@ -276,7 +277,7 @@ class WebSession(
                 defaultChannel = channel,
                 defaultChannelPassword = channelPassword,
                 // Signed in: prove the account to the server, so it can show the account's badges and signed avatar.
-                myTsIdentity = account.voiceIdentity(),
+                myTsIdentity = if (guest) null else account.voiceIdentity(),
             )
         )
     }

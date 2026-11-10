@@ -187,11 +187,6 @@ export default function ConnectPage({
   };
   // 一进来就停在 MyTeamSpeak 登录（要游客登录再点页签），符合「默认打开即是登录页」
   const [mode, setMode] = useState<Mode>('account');
-  const [selectedCloudIdentity, setSelectedCloudIdentity] = useState('');
-  useEffect(() => {
-    const key = account.email ? `huixiang.cloudIdentity.${account.email.toLowerCase()}` : '';
-    setSelectedCloudIdentity(key ? window.localStorage.getItem(key) ?? '' : '');
-  }, [account.email]);
   // 捂眼：只要光标落在密码类输入框里，右边的小家伙就集体避开视线
   const [hiding, setHiding] = useState(false);
   const recent = useMemo(() => store.recent(), []);
@@ -201,8 +196,7 @@ export default function ConnectPage({
   // 账号登录取账号名；游客登录始终用用户自己填的昵称，哪怕已登录 myTeamSpeak
   const nick = mode === 'guest' ? nickname : effectiveNickname(account, nickname);
   const identityChoices = account.identities ?? [];
-  const chosenIdentity = identityChoices.length === 1 ? identityChoices[0].id : selectedCloudIdentity;
-  const cloudIdentityReady = mode === 'guest' || !signedIn || (!account.identitiesLoading && !account.identitiesError && identityChoices.some((item) => item.id === chosenIdentity));
+  const cloudIdentityReady = mode === 'guest' || !signedIn || (!account.identitiesLoading && !account.identitiesError && identityChoices.length === 1);
   const canConnect = !!parsed && nick.trim().length > 0 && (!tokenNeeded || token.trim().length > 0) && agreed && cloudIdentityReady;
   const accountBusy = account.phase === 'busy';
   // 账号页签只填账号、密码、口令（要网关口令的话），协议勾上就能点「登录」；
@@ -296,7 +290,6 @@ export default function ConnectPage({
       password,
       identity: store.identity(),
       guest: mode === 'guest',
-      cloudIdentityId: mode === 'account' && signedIn ? chosenIdentity : undefined,
     });
   };
 
@@ -580,18 +573,11 @@ export default function ConnectPage({
                 {signedIn && (
                   <>
                     <div className="login-field">
-                      <label htmlFor="cloud-identity">账号身份</label>
+                      <label>账号身份</label>
                       {account.identitiesLoading ? <span className="login-hint">正在同步身份…</span> : account.identitiesError ?
                         <span className="field-error">身份同步失败，请刷新或重新登录（{account.identitiesError}）</span> :
-                        identityChoices.length === 0 ? <span className="field-error">没有可用的同步身份，请先在官方客户端同步身份。</span> :
-                        <select id="cloud-identity" value={chosenIdentity} onChange={(event) => {
-                          const next = event.target.value;
-                          setSelectedCloudIdentity(next);
-                          if (account.email) window.localStorage.setItem(`huixiang.cloudIdentity.${account.email.toLowerCase()}`, next);
-                        }}>
-                          {identityChoices.length > 1 && <option value="">请选择身份</option>}
-                          {identityChoices.map((item) => <option key={item.id} value={item.id}>{item.name || '未命名身份'} · {item.ts6Uid.slice(0, 10)}…</option>)}
-                        </select>}
+                        identityChoices.length !== 1 ? <span className="field-error">无法确定 Windows 身份。请在 Windows 同步正在使用的身份，并确保账号只有一个同步身份。</span> :
+                        <span className="login-hint">自动使用账号同步身份</span>}
                     </div>
                     <div className="login-bookmarks">
                       <div className="login-bookmarks-head">

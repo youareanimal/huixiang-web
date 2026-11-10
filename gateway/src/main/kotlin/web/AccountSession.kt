@@ -33,6 +33,10 @@ import java.util.concurrent.TimeoutException
  * minute, and none of that may happen on Netty's event loop. Contact display-name lookups and the optional voice
  * metadata are public-read only and use a small side pool, so one slow Matrix profile cannot hold up a login.
  */
+internal fun automaticAccountIdentity(current: MyTsAccount.Session?, owner: MyTsAccount.Session?,
+    entries: List<MyTsIdentities.Entry>): tsproto.Identity? =
+    if (current != null && current === owner) entries.singleOrNull()?.identity else null
+
 class AccountSession(
     private val push: (String) -> Unit,
     private val fileToken: String,
@@ -76,6 +80,7 @@ class AccountSession(
     @Volatile private var avatarUrl = ""
     @Volatile private var error: String? = null
     @Volatile private var syncedIdentities: List<MyTsIdentities.Entry> = emptyList()
+    @Volatile private var identitiesOwner: MyTsAccount.Session? = null
     @Volatile private var identitiesLoading = false
     @Volatile private var identitiesError: String? = null
     @Volatile private var bookmarks: List<MyTsBookmarks.Bookmark> = emptyList()
@@ -88,9 +93,11 @@ class AccountSession(
 
     /** For [web.WebSession.connect]: the account proof for the next voice connection, if it has one. */
     fun voiceIdentity(): MyTsVoiceIdentity? = voiceIdentity
-    /** Resolve a cloud entry only within the currently signed-in account; never expose its private key to the page. */
-    fun syncedIdentity(id: String): tsproto.Identity? = if (phase == "signedIn" && !identitiesLoading)
-        syncedIdentities.singleOrNull { it.id == id }?.identity else null
+    /** Resolve only an unambiguous account identity; never expose its private key to the page. */
+    fun isSignedIn(): Boolean = phase == "signedIn"
+    fun hasAccountOrPending(): Boolean = session != null || phase == "busy"
+    fun syncedIdentity(): tsproto.Identity? = if (isSignedIn() && !identitiesLoading && identitiesError == null)
+        automaticAccountIdentity(session, identitiesOwner, syncedIdentities) else null
 
     /** For [CloudChatSession]: the live myTeamSpeak session, from which chat credentials are minted. Null while signed out. */
     fun chatSession(): MyTsAccount.Session? = session
@@ -395,12 +402,14 @@ class AccountSession(
     private fun loadIdentities(current: MyTsAccount.Session) {
         identitiesLoading = true
         identitiesError = null
+        identitiesOwner = null
         syncedIdentities = emptyList()
         pushAccount()
         try {
             val items = MyTsIdentities().read(current)
             if (session !== current) return
             syncedIdentities = items
+            identitiesOwner = current
         } catch (e: CloudFailure) {
             if (session === current) identitiesError = e.code
         } catch (_: Exception) {

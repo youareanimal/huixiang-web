@@ -168,7 +168,7 @@ export default function App() {
   const playerRef = useRef<VoicePlayer | null>(null);
   const micRef = useRef<MicSender | null>(null);
   const streamRef = useRef<StreamClient | null>(null);
-  const lastAddress = useRef<{ address: string; nickname: string; guest?: boolean; cloudIdentityId?: string } | null>(null);
+  const lastAddress = useRef<{ address: string; nickname: string; guest?: boolean } | null>(null);
   // 回调里要读最新状态，不能靠闭包
   const stateRef = useRef<State | null>(null);
 
@@ -617,7 +617,7 @@ export default function App() {
       setPing({ gateway: null, server: null });
       // 记住的是「用户自己的昵称」：登录时连进来用的是账号名，退出登录后重连还要回到自定义昵称
       const remembered = opts.nickname === store.nickname() ? opts.nickname : store.nickname() || opts.nickname;
-      lastAddress.current = { address: opts.host, nickname: remembered, guest: opts.guest, cloudIdentityId: opts.cloudIdentityId };
+      lastAddress.current = { address: opts.host, nickname: remembered, guest: opts.guest };
       setChat([]);
       try {
         ensurePlayer();
@@ -665,7 +665,6 @@ export default function App() {
         password: '',
         identity: store.identity(),
         guest: last.guest,
-        cloudIdentityId: last.cloudIdentityId,
       },
       tokenNeeded ? token : '',
     );
