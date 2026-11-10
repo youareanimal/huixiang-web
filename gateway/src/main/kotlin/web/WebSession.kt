@@ -243,7 +243,7 @@ class WebSession(
             else if (identityText.isNullOrBlank()) Identity.generate() else Identity.import(identityText)
         } catch (e: Exception) {
             log("Could not read the identity the tab sent: ${e.message}")
-            fail(if (useAccountIdentity) "账号中没有唯一的 defult 同步身份，或同步暂不可用；请检查官方客户端和网络。" else "身份数据无法读取，请重新生成")
+            fail(if (useAccountIdentity) "账号中没有唯一的 default 同步身份，或同步暂不可用；请检查官方客户端和网络。" else "身份数据无法读取，请重新生成")
             return
         }
         this.nickname = nickname
