@@ -234,16 +234,16 @@ class WebSession(
 
     // ====== What the tab asks for ======
 
-    fun connect(host: String, port: Int, nickname: String, password: String, identityText: String?, channel: String = "", channelPassword: String = "", guest: Boolean = false) {
+    fun connect(host: String, port: Int, nickname: String, password: String, identityText: String?, channel: String = "", channelPassword: String = "", guest: Boolean = false, cloudIdentityId: String? = null) {
         if (closed) return
         leave()
         val useAccountIdentity = account.hasAccountOrPending()
         val identity = try {
-            if (useAccountIdentity) account.syncedIdentity() ?: throw IllegalArgumentException("Account identity unavailable")
+            if (useAccountIdentity) account.syncedIdentity(cloudIdentityId) ?: throw IllegalArgumentException("Account identity unavailable")
             else if (identityText.isNullOrBlank()) Identity.generate() else Identity.import(identityText)
         } catch (e: Exception) {
             log("Could not read the identity the tab sent: ${e.message}")
-            fail(if (useAccountIdentity) "账号中没有唯一的 default 同步身份，或同步暂不可用；请检查官方客户端和网络。" else "身份数据无法读取，请重新生成")
+            fail(if (useAccountIdentity) "账号同步身份不可用；请检查同步状态，或选择一个账号同步身份。" else "身份数据无法读取，请重新生成")
             return
         }
         this.nickname = nickname

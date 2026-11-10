@@ -401,6 +401,7 @@ export interface ConnectOptions {
   identity: string | null;
   /** 游客登录：昵称始终用用户自己填的，不被 myTeamSpeak 账号名覆盖 */
   guest?: boolean;
+  cloudIdentityId?: string;
 }
 
 // ====== 本地保存 ======
