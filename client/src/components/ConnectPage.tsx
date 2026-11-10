@@ -196,7 +196,7 @@ export default function ConnectPage({
   // 账号登录取账号名；游客登录始终用用户自己填的昵称，哪怕已登录 myTeamSpeak
   const nick = mode === 'guest' ? nickname : effectiveNickname(account, nickname);
   const identityChoices = account.identities ?? [];
-  const matchingIdentities = identityChoices.filter((entry) => entry.name === 'default');
+  const matchingIdentities = identityChoices.filter((entry) => /^default$/i.test(entry.name));
   const cloudIdentityReady = !signedIn || (!account.identitiesLoading && !account.identitiesError && matchingIdentities.length === 1);
   const canConnect = !!parsed && nick.trim().length > 0 && (!tokenNeeded || token.trim().length > 0) && agreed && cloudIdentityReady;
   const accountBusy = account.phase === 'busy';
@@ -578,7 +578,7 @@ export default function ConnectPage({
                       {account.identitiesLoading ? <span className="login-hint">正在同步身份…</span> : account.identitiesError ?
                         <span className="field-error">身份同步失败，请刷新或重新登录（{account.identitiesError}）</span> :
                         matchingIdentities.length !== 1 ? <span className="field-error">账号中没有唯一的 default 同步身份，请检查官方客户端中的身份名称和同步状态。</span> :
-                        <span className="login-hint">自动使用 default 同步身份</span>}
+                        <span className="login-hint">自动使用 default 同步身份，不区分大小写</span>}
                     </div>
                     <div className="login-bookmarks">
                       <div className="login-bookmarks-head">

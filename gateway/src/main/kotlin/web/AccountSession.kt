@@ -35,7 +35,7 @@ import java.util.concurrent.TimeoutException
  */
 internal fun automaticAccountIdentity(current: MyTsAccount.Session?, owner: MyTsAccount.Session?,
     entries: List<MyTsIdentities.Entry>): tsproto.Identity? =
-    if (current != null && current === owner) entries.filter { it.name == "default" }.singleOrNull()?.identity else null
+    if (current != null && current === owner) entries.filter { it.name.equals("default", ignoreCase = true) }.singleOrNull()?.identity else null
 
 class AccountSession(
     private val push: (String) -> Unit,
