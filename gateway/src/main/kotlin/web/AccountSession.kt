@@ -34,8 +34,11 @@ import java.util.concurrent.TimeoutException
  * metadata are public-read only and use a small side pool, so one slow Matrix profile cannot hold up a login.
  */
 internal fun automaticAccountIdentity(current: MyTsAccount.Session?, owner: MyTsAccount.Session?,
-    entries: List<MyTsIdentities.Entry>): tsproto.Identity? =
-    if (current != null && current === owner) entries.filter { it.name.equals("default", ignoreCase = true) }.singleOrNull()?.identity else null
+    entries: List<MyTsIdentities.Entry>, selectedId: String? = null): tsproto.Identity? =
+    if (current != null && current === owner)
+        (entries.filter { it.name == "Default" }.singleOrNull()
+            ?: selectedId?.let { id -> entries.singleOrNull { it.id == id } })?.identity
+    else null
 
 class AccountSession(
     private val push: (String) -> Unit,
@@ -96,8 +99,8 @@ class AccountSession(
     /** Resolve only an unambiguous account identity; never expose its private key to the page. */
     fun isSignedIn(): Boolean = phase == "signedIn"
     fun hasAccountOrPending(): Boolean = session != null || phase == "busy"
-    fun syncedIdentity(): tsproto.Identity? = if (isSignedIn() && !identitiesLoading && identitiesError == null)
-        automaticAccountIdentity(session, identitiesOwner, syncedIdentities) else null
+    fun syncedIdentity(selectedId: String?): tsproto.Identity? = if (isSignedIn() && !identitiesLoading && identitiesError == null)
+        automaticAccountIdentity(session, identitiesOwner, syncedIdentities, selectedId) else null
 
     /** For [CloudChatSession]: the live myTeamSpeak session, from which chat credentials are minted. Null while signed out. */
     fun chatSession(): MyTsAccount.Session? = session
